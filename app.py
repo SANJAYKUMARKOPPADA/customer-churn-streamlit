@@ -3,13 +3,17 @@ import pickle
 import pandas as pd
 import numpy as np
 
-# Load model & scaler
+# Load trained model and scaler
 model = pickle.load(open("model.pkl", "rb"))
 scaler = pickle.load(open("scaler.pkl", "rb"))
 
-st.title("📊 Customer Churn Prediction")
+st.set_page_config(page_title="Customer Churn Prediction", layout="centered")
 
-# EXACT column order used during training
+st.title("📊 Customer Churn Prediction App")
+
+st.write("Fill the customer details and click **Predict**")
+
+# ===== EXACT FEATURE ORDER USED DURING TRAINING =====
 columns = [
     'gender','SeniorCitizen','Partner','Dependents','tenure',
     'PhoneService','MultipleLines','InternetService','OnlineSecurity',
@@ -18,29 +22,28 @@ columns = [
     'MonthlyCharges','TotalCharges'
 ]
 
-st.subheader("Enter customer details")
+# ===== USER INPUT UI =====
+gender = st.selectbox("Gender", ["Female", "Male"])
+senior = st.selectbox("Senior Citizen", ["No", "Yes"])
+partner = st.selectbox("Partner", ["No", "Yes"])
+dependents = st.selectbox("Dependents", ["No", "Yes"])
 
-gender = st.selectbox("Gender", ["Female","Male"])
-senior = st.selectbox("Senior Citizen", ["No","Yes"])
-partner = st.selectbox("Partner", ["No","Yes"])
-dependents = st.selectbox("Dependents", ["No","Yes"])
-
-tenure = st.number_input("Tenure (months)", 0, 72, 1)
+tenure = st.slider("Tenure (months)", 0, 72, 1)
 monthly = st.number_input("Monthly Charges", 0.0, 200.0, 70.0)
-total = st.number_input("Total Charges", 0.0, 10000.0, 800.0)
+total = st.number_input("Total Charges", 0.0, 10000.0, 100.0)
 
-# Encode inputs (same logic as training)
+# ===== ENCODING (SAME LOGIC AS TRAINING) =====
 input_dict = {
-    'gender': 1 if gender=="Male" else 0,
-    'SeniorCitizen': 1 if senior=="Yes" else 0,
-    'Partner': 1 if partner=="Yes" else 0,
-    'Dependents': 1 if dependents=="Yes" else 0,
+    'gender': 1 if gender == "Male" else 0,
+    'SeniorCitizen': 1 if senior == "Yes" else 0,
+    'Partner': 1 if partner == "Yes" else 0,
+    'Dependents': 1 if dependents == "Yes" else 0,
     'tenure': tenure,
 
-    # default service values
+    # Default service values (high-risk profile)
     'PhoneService': 1,
-    'MultipleLines': 1,
-    'InternetService': 1,
+    'MultipleLines': 0,
+    'InternetService': 0,
     'OnlineSecurity': 0,
     'OnlineBackup': 0,
     'DeviceProtection': 0,
@@ -54,16 +57,17 @@ input_dict = {
     'TotalCharges': total
 }
 
-# Build DataFrame in EXACT training order
+# Build DataFrame in EXACT order
 input_df = pd.DataFrame([[input_dict[col] for col in columns]], columns=columns)
 
-# Scale + predict
-scaled = scaler.transform(input_df)
-prob = model.predict_proba(scaled)[0][1]
+# ===== PREDICT BUTTON =====
+if st.button("🔮 Predict"):
+    scaled = scaler.transform(input_df)
+    churn_prob = model.predict_proba(scaled)[0][1]
 
-st.write(f"### Churn Risk: {prob:.2f}")
+    st.write(f"### 🔍 Churn Risk: {churn_prob:.2f}")
 
-if prob >= 0.4:
-    st.error("🔴 Customer WILL CHURN")
-else:
-    st.success("🟢 Customer WILL STAY")
+    if churn_prob >= 0.4:
+        st.error("🔴 Customer WILL CHURN")
+    else:
+        st.success("🟢 Customer WILL STAY")
